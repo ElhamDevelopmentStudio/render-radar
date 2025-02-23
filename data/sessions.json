@@ -2,358 +2,136 @@
   "http://localhost:8000/test-errors": [
     {
       "version": 1,
-      "timestamp": "2025-02-24T00:06:39.2218565+04:30",
+      "timestamp": "2025-02-24T00:30:03.5744119+04:30",
       "results": {
         "http://localhost:8000/test-errors": {
           "console": [
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2219688+04:30",
+              "time": "2025-02-24T00:29:28.5668794+04:30",
               "message": "User object: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2219688+04:30",
+              "time": "2025-02-24T00:29:28.5673835+04:30",
               "message": "[object Object],[object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2219688+04:30",
+              "time": "2025-02-24T00:29:28.5673835+04:30",
               "message": "System metrics: [object Object],[object Object],[object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "[object Object],[object Object],[object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "warning",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Performance warning: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "info",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Application state: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "debug",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
-              "message": "operation: 0.0068359375 ms",
+              "time": "2025-02-24T00:29:28.567542+04:30",
+              "message": "operation: 0.02099609375 ms",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Authentication Flow",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Checking credentials...",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Token generated: eyJhbGc...[truncated]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "warning",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Using development keys",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.5680464+04:30",
               "message": "console.groupEnd",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
-              "message": "User object: Object",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "table",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Array(2)",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "System metrics: Array(3)",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "table",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Array(3)",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Performance warning: Object",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "info",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Application state: Object",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "timeEnd",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "operation: 0.0068359375 ms",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "startGroup",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Authentication Flow",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Checking credentials...",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Token generated: eyJhbGc...[truncated]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Using development keys",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "endGroup",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "console.groupEnd",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
+              "time": "2025-02-24T00:29:33.5685448+04:30",
               "message": "User object: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "User object: {id: 1234, name: Test User, preferences: Object, activities: Array(2)}",
+              "type": "table",
+              "time": "2025-02-24T00:29:38.5689273+04:30",
+              "message": "[object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "[object Object],[object Object]",
+              "time": "2025-02-24T00:29:43.569837+04:30",
+              "message": "System metrics: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "table",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "[{type: login, timestamp: 2025-02-23T19:36:11.967Z}, {type: action, details: Updated profile}]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "System metrics: [object Object],[object Object],[object Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "System metrics: [Object, Object, Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "[object Object],[object Object],[object Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "table",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "[{name: CPU, value: 85.5, unit: %}, {name: Memory, value: 2048, unit: MB}, {name: Disk, value: 256, unit: GB}]",
+              "time": "2025-02-24T00:29:48.5708623+04:30",
+              "message": "[object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "warning",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
+              "time": "2025-02-24T00:29:53.5721447+04:30",
               "message": "Performance warning: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
-              "type": "warning",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Performance warning: {type: Performance, message: High memory usage detected, details: Object}",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
               "type": "info",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
+              "time": "2025-02-24T00:30:03.5738265+04:30",
               "message": "Application state: [object Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "info",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Application state: {version: 1.0.0, environment: testing, features: Object, session: Object}",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "debug",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "operation: 0.005126953125 ms",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "timeEnd",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "operation: 0.005126953125 ms",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Authentication Flow",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "startGroup",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Authentication Flow",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Checking credentials...",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Checking credentials...",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Token generated: eyJhbGc...[truncated]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Token generated: eyJhbGc...[truncated]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Using development keys",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Using development keys",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "console.groupEnd",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "endGroup",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "console.groupEnd",
               "url": "http://localhost:8000/test-errors"
             }
           ],
           "errors": [
             {
               "type": "error",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.567542+04:30",
               "message": "Critical error: [object Object]",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "error",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
+              "time": "2025-02-24T00:29:28.5680464+04:30",
               "message": "Application error: Error: Custom Application Error",
               "url": "http://localhost:8000/test-errors"
             },
             {
               "type": "error",
-              "time": "2025-02-24T00:06:09.2226431+04:30",
-              "message": "Network failure: [object Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Critical error: Object",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Application error: Error: Custom Application Error\n    at http://localhost:8000/test-errors:116:37",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:09.2231513+04:30",
-              "message": "Network failure: Object",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
+              "time": "2025-02-24T00:29:58.5728678+04:30",
               "message": "Critical error: [object Object]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Critical error: {name: TypeError, message: Cannot read properties of null (reading 'nonexistentMethod'), stack: TypeError: Cannot read properties of null (reading…')\n    at http://localhost:8000/test-errors:64:25, timestamp: 2025-02-23T19:36:11.968Z}",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Application error: Error: Custom Application Error",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-24T00:06:11.9695449+04:30",
-              "message": "Application error: {code: APP_ERR_001, context: Object, stack: Error: Custom Application Error\n    at http://localhost:8000/test-errors:116:37, message: Custom Application Error}",
               "url": "http://localhost:8000/test-errors"
             }
           ]

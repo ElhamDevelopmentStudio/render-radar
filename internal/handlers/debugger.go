@@ -3,65 +3,86 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"debugger-api/internal/debugger"
+	"debugger-api/internal/storage"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gorilla/websocket"
 )
 
+// Add as package-level variable
+var store *storage.Store
+
+// Add init function
+func init() {
+	var err error
+	store, err = storage.NewStore("./data")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize storage: %v", err))
+	}
+}
+
 // HandleDebugger now accepts a list of URLs to debug
 func HandleDebugger(c *fiber.Ctx) error {
+	fmt.Println("🚀 Starting debug session...")
+
+	// Clear previous sessions
+	if err := store.ClearAllSessions(); err != nil {
+		fmt.Printf("❌ Failed to clear sessions: %v\n", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to cleanup"})
+	}
+	fmt.Println("✅ Cleared previous sessions")
+
 	var req debugger.DebugRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		fmt.Printf("❌ Invalid request body: %v\n", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	if len(req.URLs) == 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "No URLs provided"})
-	}
+	fmt.Printf("📍 Debugging URLs: %v\n", req.URLs)
 
 	chrome := debugger.NewChromeDebugger()
 	targets, err := chrome.GetDebuggingTargets(req.URLs)
 	if err != nil {
+		fmt.Printf("❌ Failed to get targets: %v\n", err)
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	fmt.Printf("✅ Found %d targets\n", len(targets))
 
 	response := debugger.DebugResponse{
 		Results: make(map[string]debugger.PageResults),
 		Errors:  make(map[string]string),
 	}
 
-	// Create a channel to collect results from all goroutines
-	resultsChan := make(chan struct {
-		url    string
-		logs   []debugger.ConsoleMessage
-		err    error
-	}, len(req.URLs))
-
-	// Start a goroutine for each target
+	// Debug each target sequentially for now (removing goroutines for simplicity)
 	for url, target := range targets {
-		go func(url string, target *debugger.DebuggingTarget) {
-			logs, err := debugTarget(target)
-			resultsChan <- struct {
-				url    string
-				logs   []debugger.ConsoleMessage
-				err    error
-			}{url, logs, err}
-		}(url, target)
+		fmt.Printf("📍 Debugging target: %s\n", url)
+		logs, err := debugTarget(target)
+		if err != nil {
+			fmt.Printf("❌ Error debugging %s: %v\n", url, err)
+			response.Errors[url] = err.Error()
+			continue
+		}
+		
+		results := categorizeMessages(logs)
+		response.Results[url] = results
+		fmt.Printf("✅ Collected %d console, %d errors messages\n", 
+			len(results.Console), len(results.Errors))
 	}
 
-	// Collect results
-	for i := 0; i < len(targets); i++ {
-		result := <-resultsChan
-		if result.err != nil {
-			response.Errors[result.url] = result.err.Error()
-		} else {
-			response.Results[result.url] = categorizeMessages(result.logs)
+	// Save results
+	for url, results := range response.Results {
+		if err := store.SaveSession(url, results, response.Errors); err != nil {
+			fmt.Printf("❌ Failed to save session for %s: %v\n", url, err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save"})
 		}
 	}
 
+	fmt.Println("✅ Debug session completed")
 	return c.JSON(response)
 }
 
@@ -76,23 +97,9 @@ func enableDebugging(ws *websocket.Conn) error {
 	enableRuntime := map[string]interface{}{
 		"id":     2,
 		"method": "Runtime.enable",
-		"params": map[string]interface{}{
-			"notifyOnConsoleAPICalled": true,
-			"notifyOnExceptionThrown":  true,
-		},
 	}
 
-	// Enable Network domain
-	enableNetwork := map[string]interface{}{
-		"id":     3,
-		"method": "Network.enable",
-		"params": map[string]interface{}{
-			"maxTotalBufferSize":    10000000,
-			"maxResourceBufferSize": 5000000,
-		},
-	}
-
-	for _, command := range []map[string]interface{}{enableConsole, enableRuntime, enableNetwork} {
+	for _, command := range []map[string]interface{}{enableConsole, enableRuntime} {
 		if err := ws.WriteJSON(command); err != nil {
 			return fmt.Errorf("failed to enable debugging feature: %v", err)
 		}
@@ -137,14 +144,6 @@ func captureDebugMessages(ws *websocket.Conn) []debugger.ConsoleMessage {
 				case "Runtime.consoleAPICalled":
 					msg := parseRuntimeConsole(data)
 					messages = append(messages, msg)
-
-				case "Runtime.exceptionThrown":
-					msg := parseException(data)
-					messages = append(messages, msg)
-
-				case "Network.requestWillBeSent":
-					msg := parseNetworkRequest(data)
-					messages = append(messages, msg)
 				}
 			}
 
@@ -172,15 +171,12 @@ func categorizeMessages(messages []debugger.ConsoleMessage) debugger.PageResults
 	results := debugger.PageResults{
 		Console: make([]debugger.ConsoleMessage, 0),
 		Errors:  make([]debugger.ConsoleMessage, 0),
-		Network: make([]debugger.ConsoleMessage, 0),
 	}
 
 	for _, msg := range messages {
 		switch msg.Type {
 		case "error", "exception":
 			results.Errors = append(results.Errors, msg)
-		case "network":
-			results.Network = append(results.Network, msg)
 		default:
 			results.Console = append(results.Console, msg)
 		}
@@ -205,8 +201,6 @@ func parseConsoleMessage(data map[string]interface{}) debugger.ConsoleMessage {
 		Time:    time.Now(),
 		Message: message["text"].(string),
 		URL:     message["url"].(string),
-		Line:    int(message["line"].(float64)),
-		Column:  int(message["column"].(float64)),
 	}
 }
 
@@ -217,86 +211,107 @@ func parseRuntimeConsole(data map[string]interface{}) debugger.ConsoleMessage {
 	}
 
 	args := params["args"].([]interface{})
-	var messageData []interface{}
-	for _, arg := range args {
+	var message strings.Builder
+
+	for i, arg := range args {
 		argMap := arg.(map[string]interface{})
-		if preview, ok := argMap["preview"].(map[string]interface{}); ok {
-			messageData = append(messageData, preview)
-		} else {
-			messageData = append(messageData, argMap["value"])
+		
+		if i > 0 {
+			message.WriteString(" ")
+		}
+
+		switch argMap["type"].(string) {
+		case "string", "number", "boolean":
+			if value, ok := argMap["value"]; ok {
+				message.WriteString(fmt.Sprintf("%v", value))
+			}
+		case "object":
+			if subtype, ok := argMap["subtype"].(string); ok && subtype == "null" {
+				message.WriteString("null")
+				continue
+			}
+			
+			if preview, ok := argMap["preview"].(map[string]interface{}); ok {
+				if subtype, ok := preview["subtype"].(string); ok && subtype == "array" {
+					message.WriteString(formatArray(preview))
+				} else {
+					message.WriteString(formatObject(preview))
+				}
+			} else if description, ok := argMap["description"].(string); ok {
+				message.WriteString(description)
+			}
+		default:
+			if description, ok := argMap["description"].(string); ok {
+				message.WriteString(description)
+			}
 		}
 	}
 
 	return debugger.ConsoleMessage{
 		Type:    params["type"].(string),
 		Time:    time.Now(),
-		Data:    messageData,
-		Stack:   getStackTrace(params),
+		Message: strings.TrimSpace(message.String()),
+		URL:     getSourceURL(params),
 	}
 }
 
-func parseException(data map[string]interface{}) debugger.ConsoleMessage {
-	params, ok := data["params"].(map[string]interface{})
-	if !ok {
-		return debugger.ConsoleMessage{}
-	}
-
-	exceptionDetails, ok := params["exceptionDetails"].(map[string]interface{})
-	if !ok {
-		return debugger.ConsoleMessage{}
-	}
-
-	var message string
-	if text, ok := exceptionDetails["text"].(string); ok {
-		message = text
-	}
-	if exception, ok := exceptionDetails["exception"].(map[string]interface{}); ok {
-		if description, ok := exception["description"].(string); ok {
-			message = description
+func formatObject(preview map[string]interface{}) string {
+	var result strings.Builder
+	result.WriteString("{")
+	
+	if properties, ok := preview["properties"].([]interface{}); ok {
+		for i, p := range properties {
+			prop := p.(map[string]interface{})
+			if i > 0 {
+				result.WriteString(", ")
+			}
+			name := prop["name"].(string)
+			value := prop["value"].(string)
+			
+			// Handle nested object previews
+			if valuePreview, ok := prop["valuePreview"].(map[string]interface{}); ok {
+				value = formatObject(valuePreview)
+			}
+			
+			result.WriteString(fmt.Sprintf("%s: %s", name, value))
 		}
 	}
-
-	return debugger.ConsoleMessage{
-		Type:    "exception",
-		Time:    time.Now(),
-		Message: message,
-		Stack:   getStackTrace(exceptionDetails),
-	}
+	
+	result.WriteString("}")
+	return result.String()
 }
 
-func parseNetworkRequest(data map[string]interface{}) debugger.ConsoleMessage {
-	params, ok := data["params"].(map[string]interface{})
-	if !ok {
-		return debugger.ConsoleMessage{}
+func formatArray(preview map[string]interface{}) string {
+	var result strings.Builder
+	result.WriteString("[")
+	
+	if properties, ok := preview["properties"].([]interface{}); ok {
+		for i, p := range properties {
+			prop := p.(map[string]interface{})
+			if i > 0 {
+				result.WriteString(", ")
+			}
+			
+			if valuePreview, ok := prop["valuePreview"].(map[string]interface{}); ok {
+				result.WriteString(formatObject(valuePreview))
+			} else {
+				result.WriteString(prop["value"].(string))
+			}
+		}
 	}
-
-	request, ok := params["request"].(map[string]interface{})
-	if !ok {
-		return debugger.ConsoleMessage{}
-	}
-
-	return debugger.ConsoleMessage{
-		Type:    "network",
-		Time:    time.Now(),
-		Message: fmt.Sprintf("%v %v", request["method"], request["url"]),
-		Data:    request,
-	}
+	
+	result.WriteString("]")
+	return result.String()
 }
 
-func getStackTrace(data map[string]interface{}) string {
-	if stackTrace, ok := data["stackTrace"].(map[string]interface{}); ok {
-		if callFrames, ok := stackTrace["callFrames"].([]interface{}); ok {
-			var stack string
-			for _, frame := range callFrames {
-				if frameMap, ok := frame.(map[string]interface{}); ok {
-					stack += fmt.Sprintf("    at %s (%s:%v:%v)\n",
-						frameMap["functionName"],
-						frameMap["url"],
-						frameMap["lineNumber"],
-						frameMap["columnNumber"])
+func getSourceURL(params map[string]interface{}) string {
+	if stackTrace, ok := params["stackTrace"].(map[string]interface{}); ok {
+		if frames, ok := stackTrace["callFrames"].([]interface{}); ok && len(frames) > 0 {
+			if frame, ok := frames[0].(map[string]interface{}); ok {
+				if url, ok := frame["url"].(string); ok {
+					return url
 				}
 			}
-			return stack
 		}
 	}
 	return ""

@@ -15,7 +15,7 @@ func HandleTestErrors(c *fiber.Ctx) error {
             </style>
         </head>
         <body>
-            <h1>Testing Errors</h1>
+            <h1>Testing Console Output</h1>
             <div id="logs"></div>
             <script>
                 function addLog(msg, isError = false) {
@@ -25,44 +25,113 @@ func HandleTestErrors(c *fiber.Ctx) error {
                     document.getElementById('logs').appendChild(div);
                 }
 
-                // Log start
-                addLog('Starting error tests...');
-                
-                // Network requests
-                addLog('Making network requests...');
-                fetch('https://api.example.com/nonexistent')
-                    .catch(e => addLog('Network error: ' + e.message, true));
-                
-                // Reference error
-                addLog('Triggering reference error...');
+                // Complex object logging
+                const user = {
+                    id: 1234,
+                    name: "Test User",
+                    preferences: {
+                        theme: "dark",
+                        notifications: true,
+                        settings: {
+                            autoSave: true,
+                            compression: "high"
+                        }
+                    },
+                    activities: [
+                        { type: "login", timestamp: new Date().toISOString() },
+                        { type: "action", details: "Updated profile" }
+                    ]
+                };
+                console.log("User object:", user);
+                console.table(user.activities);
+
+                // Array and structured data
+                const metrics = [
+                    { name: "CPU", value: 85.5, unit: "%" },
+                    { name: "Memory", value: 2048, unit: "MB" },
+                    { name: "Disk", value: 256, unit: "GB" }
+                ];
+                console.log("System metrics:", metrics);
+                console.table(metrics);
+
+                // Warning with object
+                const performanceWarning = {
+                    type: "Performance",
+                    message: "High memory usage detected",
+                    details: {
+                        current: "85%",
+                        threshold: "75%",
+                        recommendations: ["Clear cache", "Close unused tabs"]
+                    }
+                };
+                console.warn("Performance warning:", performanceWarning);
+
+                // Error with stack trace
                 try {
-                    undefinedVariable.someMethod();
-                } catch(e) {
-                    addLog('Reference error: ' + e.message, true);
-                    console.error(e);
-                }
-                
-                // Syntax error
-                addLog('Triggering syntax error...');
-                try {
-                    eval('if true { console.log("bad syntax") }');
-                } catch(e) {
-                    addLog('Syntax error: ' + e.message, true);
-                    console.error(e);
-                }
-                
-                // Type error
-                addLog('Triggering type error...');
-                try {
-                    null.toString();
-                } catch(e) {
-                    addLog('Type error: ' + e.message, true);
-                    console.error(e);
+                    const obj = null;
+                    obj.nonexistentMethod();
+                } catch (e) {
+                    console.error("Critical error:", {
+                        name: e.name,
+                        message: e.message,
+                        stack: e.stack,
+                        timestamp: new Date().toISOString()
+                    });
                 }
 
-                // Custom error
-                addLog('Throwing custom error...');
-                throw new Error("This is a test error");
+                // Network error simulation
+                fetch('https://api.nonexistent.com/data')
+                    .then(response => response.json())
+                    .catch(error => {
+                        console.error("Network failure:", {
+                            type: "API_ERROR",
+                            endpoint: "https://api.nonexistent.com/data",
+                            error: error.message,
+                            timestamp: new Date().toISOString()
+                        });
+                    });
+
+                // Info with nested data
+                console.info("Application state:", {
+                    version: "1.0.0",
+                    environment: "testing",
+                    features: {
+                        enabled: ["debug", "metrics", "logging"],
+                        disabled: ["analytics"]
+                    },
+                    session: {
+                        id: "sess_" + Math.random().toString(36).substr(2),
+                        started: new Date().toISOString(),
+                        user: "test@example.com"
+                    }
+                });
+
+                // Debug with timing
+                console.time("operation");
+                for (let i = 0; i < 1000; i++) {
+                    // Simulate work
+                }
+                console.timeEnd("operation");
+
+                // Group logged messages
+                console.group("Authentication Flow");
+                console.log("Checking credentials...");
+                console.log("Token generated:", "eyJhbGc...[truncated]");
+                console.warn("Using development keys");
+                console.groupEnd();
+
+                // Custom error with detailed context
+                const customError = new Error("Custom Application Error");
+                customError.code = "APP_ERR_001";
+                customError.context = {
+                    component: "UserManager",
+                    action: "profile_update",
+                    params: { userId: 123, updates: { email: "new@example.com" } }
+                };
+                console.error("Application error:", customError);
+
+                // Throw final error to test error boundary
+                throw new Error("Test completed with simulated crash");
             </script>
         </body>
     </html>

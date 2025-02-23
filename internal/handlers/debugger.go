@@ -29,14 +29,14 @@ func HandleDebugger(c *fiber.Ctx) error {
 	}
 
 	response := debugger.DebugResponse{
-		Results: make(map[string][]string),
+		Results: make(map[string]debugger.PageResults),
 		Errors:  make(map[string]string),
 	}
 
 	// Create a channel to collect results from all goroutines
 	resultsChan := make(chan struct {
 		url    string
-		logs   []string
+		logs   []debugger.ConsoleMessage
 		err    error
 	}, len(req.URLs))
 
@@ -46,7 +46,7 @@ func HandleDebugger(c *fiber.Ctx) error {
 			logs, err := debugTarget(target)
 			resultsChan <- struct {
 				url    string
-				logs   []string
+				logs   []debugger.ConsoleMessage
 				err    error
 			}{url, logs, err}
 		}(url, target)
@@ -58,7 +58,7 @@ func HandleDebugger(c *fiber.Ctx) error {
 		if result.err != nil {
 			response.Errors[result.url] = result.err.Error()
 		} else {
-			response.Results[result.url] = result.logs
+			response.Results[result.url] = categorizeMessages(result.logs)
 		}
 	}
 
@@ -66,33 +66,42 @@ func HandleDebugger(c *fiber.Ctx) error {
 }
 
 func enableDebugging(ws *websocket.Conn) error {
-	enableNetwork := map[string]interface{}{
+	// Enable Console domain
+	enableConsole := map[string]interface{}{
 		"id":     1,
+		"method": "Console.enable",
+	}
+	
+	// Enable Runtime domain with console API
+	enableRuntime := map[string]interface{}{
+		"id":     2,
+		"method": "Runtime.enable",
+		"params": map[string]interface{}{
+			"notifyOnConsoleAPICalled": true,
+			"notifyOnExceptionThrown":  true,
+		},
+	}
+
+	// Enable Network domain
+	enableNetwork := map[string]interface{}{
+		"id":     3,
 		"method": "Network.enable",
 		"params": map[string]interface{}{
 			"maxTotalBufferSize":    10000000,
 			"maxResourceBufferSize": 5000000,
 		},
 	}
-	enableRuntime := map[string]interface{}{
-		"id":     2,
-		"method": "Runtime.enable",
-		"params": map[string]interface{}{
-			"notifyOnExceptionThrown": true,
-		},
-	}
 
-	if err := ws.WriteJSON(enableNetwork); err != nil {
-		return fmt.Errorf("failed to enable Network debugging: %v", err)
-	}
-	if err := ws.WriteJSON(enableRuntime); err != nil {
-		return fmt.Errorf("failed to enable Runtime debugging: %v", err)
+	for _, command := range []map[string]interface{}{enableConsole, enableRuntime, enableNetwork} {
+		if err := ws.WriteJSON(command); err != nil {
+			return fmt.Errorf("failed to enable debugging feature: %v", err)
+		}
 	}
 	return nil
 }
 
-func captureDebugMessages(ws *websocket.Conn) []string {
-	debuggingData := []string{}
+func captureDebugMessages(ws *websocket.Conn) []debugger.ConsoleMessage {
+	messages := []debugger.ConsoleMessage{}
 	timeout := time.After(30 * time.Second)
 	messageChannel := make(chan []byte)
 
@@ -100,7 +109,6 @@ func captureDebugMessages(ws *websocket.Conn) []string {
 		for {
 			_, message, err := ws.ReadMessage()
 			if err != nil {
-				fmt.Printf("WebSocket read error: %v\n", err)
 				close(messageChannel)
 				return
 			}
@@ -112,52 +120,41 @@ func captureDebugMessages(ws *websocket.Conn) []string {
 		select {
 		case message, ok := <-messageChannel:
 			if !ok {
-				return debuggingData
+				return messages
 			}
-			
+
 			var data map[string]interface{}
 			if err := json.Unmarshal(message, &data); err != nil {
-				fmt.Printf("JSON unmarshal error: %v\n", err)
 				continue
 			}
 
-			fmt.Printf("Received message: %s\n", string(message))
-
 			if method, ok := data["method"].(string); ok {
 				switch method {
+				case "Console.messageAdded":
+					msg := parseConsoleMessage(data)
+					messages = append(messages, msg)
+
+				case "Runtime.consoleAPICalled":
+					msg := parseRuntimeConsole(data)
+					messages = append(messages, msg)
+
 				case "Runtime.exceptionThrown":
-					if params, ok := data["params"].(map[string]interface{}); ok {
-						if exceptionDetails, ok := params["exceptionDetails"].(map[string]interface{}); ok {
-							errorMessage := ""
-							if text, ok := exceptionDetails["text"].(string); ok {
-								errorMessage = text
-							}
-							if exception, ok := exceptionDetails["exception"].(map[string]interface{}); ok {
-								if description, ok := exception["description"].(string); ok {
-									errorMessage = description
-								}
-							}
-							debuggingData = append(debuggingData, fmt.Sprintf("❌ JS Error: %s", errorMessage))
-						}
-					}
+					msg := parseException(data)
+					messages = append(messages, msg)
+
 				case "Network.requestWillBeSent":
-					if params, ok := data["params"].(map[string]interface{}); ok {
-						if request, ok := params["request"].(map[string]interface{}); ok {
-							debuggingData = append(debuggingData, fmt.Sprintf("📡 Network Request: %v %v", 
-								request["method"], request["url"]))
-						}
-					}
+					msg := parseNetworkRequest(data)
+					messages = append(messages, msg)
 				}
 			}
 
 		case <-timeout:
-			fmt.Println("Debugger timeout reached")
-			return debuggingData
+			return messages
 		}
 	}
 }
 
-func debugTarget(target *debugger.DebuggingTarget) ([]string, error) {
+func debugTarget(target *debugger.DebuggingTarget) ([]debugger.ConsoleMessage, error) {
 	ws, _, err := websocket.DefaultDialer.Dial(target.WebSocketDebuggerUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("websocket connection error: %v", err)
@@ -169,4 +166,138 @@ func debugTarget(target *debugger.DebuggingTarget) ([]string, error) {
 	}
 
 	return captureDebugMessages(ws), nil
+}
+
+func categorizeMessages(messages []debugger.ConsoleMessage) debugger.PageResults {
+	results := debugger.PageResults{
+		Console: make([]debugger.ConsoleMessage, 0),
+		Errors:  make([]debugger.ConsoleMessage, 0),
+		Network: make([]debugger.ConsoleMessage, 0),
+	}
+
+	for _, msg := range messages {
+		switch msg.Type {
+		case "error", "exception":
+			results.Errors = append(results.Errors, msg)
+		case "network":
+			results.Network = append(results.Network, msg)
+		default:
+			results.Console = append(results.Console, msg)
+		}
+	}
+
+	return results
+}
+
+func parseConsoleMessage(data map[string]interface{}) debugger.ConsoleMessage {
+	params, ok := data["params"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	message, ok := params["message"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	return debugger.ConsoleMessage{
+		Type:    message["level"].(string),
+		Time:    time.Now(),
+		Message: message["text"].(string),
+		URL:     message["url"].(string),
+		Line:    int(message["line"].(float64)),
+		Column:  int(message["column"].(float64)),
+	}
+}
+
+func parseRuntimeConsole(data map[string]interface{}) debugger.ConsoleMessage {
+	params, ok := data["params"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	args := params["args"].([]interface{})
+	var messageData []interface{}
+	for _, arg := range args {
+		argMap := arg.(map[string]interface{})
+		if preview, ok := argMap["preview"].(map[string]interface{}); ok {
+			messageData = append(messageData, preview)
+		} else {
+			messageData = append(messageData, argMap["value"])
+		}
+	}
+
+	return debugger.ConsoleMessage{
+		Type:    params["type"].(string),
+		Time:    time.Now(),
+		Data:    messageData,
+		Stack:   getStackTrace(params),
+	}
+}
+
+func parseException(data map[string]interface{}) debugger.ConsoleMessage {
+	params, ok := data["params"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	exceptionDetails, ok := params["exceptionDetails"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	var message string
+	if text, ok := exceptionDetails["text"].(string); ok {
+		message = text
+	}
+	if exception, ok := exceptionDetails["exception"].(map[string]interface{}); ok {
+		if description, ok := exception["description"].(string); ok {
+			message = description
+		}
+	}
+
+	return debugger.ConsoleMessage{
+		Type:    "exception",
+		Time:    time.Now(),
+		Message: message,
+		Stack:   getStackTrace(exceptionDetails),
+	}
+}
+
+func parseNetworkRequest(data map[string]interface{}) debugger.ConsoleMessage {
+	params, ok := data["params"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	request, ok := params["request"].(map[string]interface{})
+	if !ok {
+		return debugger.ConsoleMessage{}
+	}
+
+	return debugger.ConsoleMessage{
+		Type:    "network",
+		Time:    time.Now(),
+		Message: fmt.Sprintf("%v %v", request["method"], request["url"]),
+		Data:    request,
+	}
+}
+
+func getStackTrace(data map[string]interface{}) string {
+	if stackTrace, ok := data["stackTrace"].(map[string]interface{}); ok {
+		if callFrames, ok := stackTrace["callFrames"].([]interface{}); ok {
+			var stack string
+			for _, frame := range callFrames {
+				if frameMap, ok := frame.(map[string]interface{}); ok {
+					stack += fmt.Sprintf("    at %s (%s:%v:%v)\n",
+						frameMap["functionName"],
+						frameMap["url"],
+						frameMap["lineNumber"],
+						frameMap["columnNumber"])
+				}
+			}
+			return stack
+		}
+	}
+	return ""
 } 

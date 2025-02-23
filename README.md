@@ -1,4 +1,4 @@
-.
+```
 ├── cmd
 │   └── main.go
 ├── internal
@@ -11,3 +11,4 @@
 │   └── server
 │       └── server.go
 └── go.mod
+```

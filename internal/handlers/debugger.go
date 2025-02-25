@@ -89,21 +89,38 @@ func HandleDebugger(c *fiber.Ctx) error {
 }
 
 func enableDebugging(ws *websocket.Conn) error {
-	// Enable Console domain
-	enableConsole := map[string]interface{}{
-		"id":     1,
-		"method": "Console.enable",
-	}
-	
-	// Enable Runtime domain with console API
+	// Enable Runtime domain first
 	enableRuntime := map[string]interface{}{
-		"id":     2,
+		"id":     1,
 		"method": "Runtime.enable",
+		"params": map[string]interface{}{
+			"notifyOnConsoleAPICalled": true,
+		},
 	}
 
-	for _, command := range []map[string]interface{}{enableConsole, enableRuntime} {
+	// Enable Console domain
+	enableConsole := map[string]interface{}{
+		"id":     2,
+		"method": "Console.enable",
+	}
+
+	// Enable property collection
+	enableProperties := map[string]interface{}{
+		"id":     3,
+		"method": "Runtime.setCustomObjectFormatterEnabled",
+		"params": map[string]interface{}{
+			"enabled": true,
+		},
+	}
+
+	for _, command := range []map[string]interface{}{enableRuntime, enableConsole, enableProperties} {
 		if err := ws.WriteJSON(command); err != nil {
 			return fmt.Errorf("failed to enable debugging feature: %v", err)
+		}
+		// Wait for response
+		_, _, err := ws.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("failed to read response: %v", err)
 		}
 	}
 	return nil
@@ -139,7 +156,7 @@ func captureDebugMessages(ws *websocket.Conn) []debugger.ConsoleMessage {
 			}
 
 			// Handle the message (responses and events)
-			handleWebSocketMessage(ws, data)
+			handleWebSocketMessage(data)
 
 			// Process console messages
 			if method, ok := data["method"].(string); ok {
@@ -213,60 +230,60 @@ func parseConsoleMessage(data map[string]interface{}) debugger.ConsoleMessage {
 func parseRuntimeConsole(ws *websocket.Conn, data map[string]interface{}) debugger.ConsoleMessage {
 	params, ok := data["params"].(map[string]interface{})
 	if !ok {
-		return debugger.ConsoleMessage{}
+			return debugger.ConsoleMessage{}
 	}
 
 	args := params["args"].([]interface{})
 	var message strings.Builder
 
 	for i, arg := range args {
-		argMap := arg.(map[string]interface{})
-		
-		// Debug logging
-		fmt.Printf("🔍 Argument %d: type=%v, objectId=%v\n", 
-			i, argMap["type"], argMap["objectId"])
-
-		if i > 0 {
-			message.WriteString(" ")
-		}
-
-		switch argMap["type"].(string) {
-		case "string", "number", "boolean":
-			if value, ok := argMap["value"]; ok {
-				message.WriteString(fmt.Sprintf("%v", value))
-			}
-		case "object":
-			if subtype, ok := argMap["subtype"].(string); ok && subtype == "null" {
-				message.WriteString("null")
-				continue
+			argMap := arg.(map[string]interface{})
+			
+			if i > 0 {
+					message.WriteString(" ")
 			}
 
-			// Get the object ID for detailed property retrieval
-			if objectID, ok := argMap["objectId"].(string); ok {
-				props := getObjectProperties(ws, objectID)
-				if props != nil {
-					message.WriteString(formatDetailedObject(props))
-				} else {
-					// Fallback to preview if available
-					if preview, ok := argMap["preview"].(map[string]interface{}); ok {
-						message.WriteString(formatObject(preview))
-					} else {
-						message.WriteString("[object Object]")
+			switch argMap["type"].(string) {
+			case "string":
+					if value, ok := argMap["value"]; ok {
+							message.WriteString(fmt.Sprintf("%v", value))
 					}
-				}
-			} else if preview, ok := argMap["preview"].(map[string]interface{}); ok {
-				message.WriteString(formatObject(preview))
-			} else if description, ok := argMap["description"].(string); ok {
-				message.WriteString(description)
+			case "number", "boolean":
+					if value, ok := argMap["value"]; ok {
+							message.WriteString(fmt.Sprintf("%v", value))
+					}
+			case "object":
+					if subtype, ok := argMap["subtype"].(string); ok {
+							switch subtype {
+							case "null":
+									message.WriteString("null")
+							case "array":
+									if preview, ok := argMap["preview"].(map[string]interface{}); ok {
+											message.WriteString(formatArray(preview))
+									} else {
+											message.WriteString(fmt.Sprintf("Array(%v)", argMap["description"]))
+									}
+							default:
+									if objectID, ok := argMap["objectId"].(string); ok {
+											props := getObjectProperties(ws, objectID)
+											if props != nil {
+													message.WriteString(formatDetailedObject(props))
+											} else if preview, ok := argMap["preview"].(map[string]interface{}); ok {
+													message.WriteString(formatObject(preview))
+											} else {
+													message.WriteString(argMap["description"].(string))
+											}
+									}
+							}
+					}
 			}
-		}
 	}
 
 	return debugger.ConsoleMessage{
-		Type:    params["type"].(string),
-		Time:    time.Now(),
-		Message: strings.TrimSpace(message.String()),
-		URL:     getSourceURL(params),
+			Type:    params["type"].(string),
+			Time:    time.Now(),
+			Message: strings.TrimSpace(message.String()),
+			URL:     getSourceURL(params),
 	}
 }
 
@@ -283,13 +300,13 @@ var (
 
 func getObjectProperties(ws *websocket.Conn, objectID string) map[string]interface{} {
 	reqID := atomic.AddInt64(&requestCounter, 1)
-	responseChan := make(chan map[string]interface{}, 1)
+	responseChan := make(chan map[string]interface{}, 5)
 	
 	// Register request
 	requestMutex.Lock()
 	pendingRequests[reqID] = responseChannel{
 		ch:      responseChan,
-		timeout: time.Now().Add(5 * time.Second),
+		timeout: time.Now().Add(30 * time.Second),
 	}
 	requestMutex.Unlock()
 
@@ -325,51 +342,43 @@ func getObjectProperties(ws *websocket.Conn, objectID string) map[string]interfa
 		if result, ok := response["result"].(map[string]interface{}); ok {
 			return result
 		}
-		fmt.Printf("❌ Invalid response format for reqID: %d\n", reqID)
 		return nil
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		fmt.Printf("⏰ Timeout waiting for response to reqID: %d\n", reqID)
 		return nil
 	}
 }
 
-func handleWebSocketMessage(ws *websocket.Conn, data map[string]interface{}) {
-	// Check if it's a response to a pending request
+func handleWebSocketMessage(data map[string]interface{}) {
 	if id, ok := data["id"].(float64); ok {
 		reqID := int64(id)
 		requestMutex.RLock()
 		if respChan, exists := pendingRequests[reqID]; exists {
-			if time.Now().Before(respChan.timeout) {
-				fmt.Printf("✅ Received response for reqID: %d\n", reqID)
-				respChan.ch <- data
-			} else {
-				fmt.Printf("⏰ Response received after timeout for reqID: %d\n", reqID)
+			select {
+			case respChan.ch <- data:
+				fmt.Printf("✅ Sent response for reqID: %d\n", reqID)
+			default:
+				fmt.Printf("⚠️ Channel full for reqID: %d\n", reqID)
 			}
-		} else {
-			fmt.Printf("❓ Received response for unknown reqID: %d\n", reqID)
 		}
 		requestMutex.RUnlock()
 		return
 	}
 
-	// Handle other message types (events, etc.)
-	if method, ok := data["method"].(string); ok {
-		fmt.Printf("📍 Received method: %s\n", method)
+	// Log the full message for debugging
+	if bytes, err := json.Marshal(data); err == nil {
+		fmt.Printf("📍 Full message: %s\n", string(bytes))
 	}
 }
 
 func formatDetailedObject(props map[string]interface{}) string {
 	if props == nil {
-		fmt.Println("❌ formatDetailedObject got nil props")
 		return "[object Object]"
 	}
 
-	fmt.Printf("📍 Formatting object properties: %#v\n", props)
-	
 	var builder strings.Builder
 	builder.WriteString("{")
 
-	// The result from Runtime.getProperties is in the "result" field
 	if result, ok := props["result"].([]interface{}); ok {
 		for i, p := range result {
 			prop := p.(map[string]interface{})
@@ -377,34 +386,19 @@ func formatDetailedObject(props map[string]interface{}) string {
 				builder.WriteString(", ")
 			}
 
-			// Get property name
 			name := prop["name"].(string)
-
-			// Get property value
 			if value, ok := prop["value"].(map[string]interface{}); ok {
-				// Handle different value types
-				switch value["type"].(string) {
+				valueType := value["type"].(string)
+				switch valueType {
 				case "string":
-					builder.WriteString(fmt.Sprintf("%s: \"%s\"", name, value["value"]))
+					builder.WriteString(fmt.Sprintf("%s: %q", name, value["value"]))
 				case "number", "boolean":
 					builder.WriteString(fmt.Sprintf("%s: %v", name, value["value"]))
 				case "object":
-					if subtype, ok := value["subtype"].(string); ok {
-						if subtype == "null" {
-							builder.WriteString(fmt.Sprintf("%s: null", name))
-						} else if subtype == "array" {
-							builder.WriteString(fmt.Sprintf("%s: [...]", name))
-						} else {
-							builder.WriteString(fmt.Sprintf("%s: {...}", name))
-						}
+					if description, ok := value["description"].(string); ok {
+						builder.WriteString(fmt.Sprintf("%s: %s", name, description))
 					} else {
-						builder.WriteString(fmt.Sprintf("%s: {...}", name))
-					}
-				default:
-					if desc, ok := value["description"].(string); ok {
-						builder.WriteString(fmt.Sprintf("%s: %s", name, desc))
-					} else {
-						builder.WriteString(fmt.Sprintf("%s: undefined", name))
+						builder.WriteString(fmt.Sprintf("%s: [object Object]", name))
 					}
 				}
 			}

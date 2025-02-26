@@ -1,92 +1,25 @@
 {
-  "http://localhost:8000/test-errors": [
+  "http://localhost:3000": [
     {
       "version": 1,
-      "timestamp": "2025-02-25T20:41:35.8771016+04:30",
+      "timestamp": "2025-02-26T22:48:32.4947535+04:30",
       "results": {
-        "http://localhost:8000/test-errors": {
+        "http://localhost:3000": {
           "console": [
             {
-              "type": "table",
-              "time": "2025-02-25T20:41:05.8741812+04:30",
-              "message": "Array(Array(2))",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-25T20:41:05.8741812+04:30",
-              "message": "System metrics: Array(Array(3))",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "table",
-              "time": "2025-02-25T20:41:05.8746869+04:30",
-              "message": "Array(Array(3))",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-25T20:41:05.8746869+04:30",
-              "message": "Performance warning:",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
               "type": "info",
-              "time": "2025-02-25T20:41:05.8746869+04:30",
-              "message": "Application state:",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "timeEnd",
-              "time": "2025-02-25T20:41:05.8752057+04:30",
-              "message": "operation: 0.1279296875 ms",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "startGroup",
-              "time": "2025-02-25T20:41:05.8752057+04:30",
-              "message": "Authentication Flow",
-              "url": "http://localhost:8000/test-errors"
+              "time": "2025-02-26T22:48:02.4931613+04:30",
+              "message": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+              "url": "http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc._.js"
             },
             {
               "type": "log",
-              "time": "2025-02-25T20:41:05.8752057+04:30",
-              "message": "Checking credentials...",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "log",
-              "time": "2025-02-25T20:41:05.8752057+04:30",
-              "message": "Token generated: eyJhbGc...[truncated]",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "warning",
-              "time": "2025-02-25T20:41:05.8752057+04:30",
-              "message": "Using development keys",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "endGroup",
-              "time": "2025-02-25T20:41:05.8757365+04:30",
-              "message": "console.groupEnd",
-              "url": "http://localhost:8000/test-errors"
+              "time": "2025-02-26T22:48:32.4940733+04:30",
+              "message": "%c%s%c The names are:",
+              "url": "rsc://React/Server/C:%5CUsers%5Cbahra%5COneDrive%5CDesktop%5CProjects%5CJavaScript%5Cjacker%5C.next%5Cserver%5Cchunks%5Cssr%5C_79e61e._.js?0"
             }
           ],
-          "errors": [
-            {
-              "type": "error",
-              "time": "2025-02-25T20:41:05.8746869+04:30",
-              "message": "Critical error:",
-              "url": "http://localhost:8000/test-errors"
-            },
-            {
-              "type": "error",
-              "time": "2025-02-25T20:41:35.8763094+04:30",
-              "message": "Application error: Error: Custom Application Error\n    at http://localhost:8000/test-errors:116:37",
-              "url": "http://localhost:8000/test-errors"
-            }
-          ]
+          "errors": []
         }
       },
       "errors": {}

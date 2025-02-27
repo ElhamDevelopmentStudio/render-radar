@@ -418,29 +418,6 @@ func formatObject(preview map[string]interface{}) string {
 	return result.String()
 }
 
-func formatArray(preview map[string]interface{}) string {
-	var result strings.Builder
-	result.WriteString("[")
-	
-	if properties, ok := preview["properties"].([]interface{}); ok {
-		for i, p := range properties {
-			prop := p.(map[string]interface{})
-			if i > 0 {
-				result.WriteString(", ")
-			}
-			
-			if valuePreview, ok := prop["valuePreview"].(map[string]interface{}); ok {
-				result.WriteString(formatObject(valuePreview))
-			} else {
-				result.WriteString(prop["value"].(string))
-			}
-		}
-	}
-	
-	result.WriteString("]")
-	return result.String()
-}
-
 func getSourceURL(params map[string]interface{}) string {
 	if stackTrace, ok := params["stackTrace"].(map[string]interface{}); ok {
 		if frames, ok := stackTrace["callFrames"].([]interface{}); ok && len(frames) > 0 {

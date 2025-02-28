@@ -16,6 +16,11 @@ import (
 )
 
 var store *storage.Store
+var messagePool = sync.Pool{
+	New: func() interface{} {
+		return make([]debugger.ConsoleMessage, 0, 100)
+	},
+}
 
 func init() {
 	var err error
@@ -117,9 +122,9 @@ func enableDebugging(ws *websocket.Conn) error {
 }
 
 func captureDebugMessages(ws *websocket.Conn) []debugger.ConsoleMessage {
-	messages := []debugger.ConsoleMessage{}
+	messages := messagePool.Get().([]debugger.ConsoleMessage)
 	timeout := time.After(30 * time.Second)
-	messageChannel := make(chan []byte)
+	messageChannel := make(chan []byte, 50)
 
 	go func() {
 		for {
@@ -358,7 +363,9 @@ func formatDetailedObject(props map[string]interface{}) string {
 		return "[object Object]"
 	}
 
-	var builder strings.Builder
+	// Pre-allocate builder with estimated size
+	builder := strings.Builder{}
+	builder.Grow(256)
 	builder.WriteString("{")
 
 	if result, ok := props["result"].([]interface{}); ok {
@@ -373,16 +380,16 @@ func formatDetailedObject(props map[string]interface{}) string {
 				valueType := value["type"].(string)
 				switch valueType {
 				case "string":
-					builder.WriteString(fmt.Sprintf("%q: %q", name, value["value"]))
+					fmt.Fprintf(&builder, "%q: %q", name, value["value"])
 				case "number", "boolean":
-					builder.WriteString(fmt.Sprintf("%q: %v", name, value["value"]))
+					fmt.Fprintf(&builder, "%q: %v", name, value["value"])
 				case "object":
 					if preview, ok := value["preview"].(map[string]interface{}); ok {
-						builder.WriteString(fmt.Sprintf("%q: %s", name, formatObject(preview)))
+						fmt.Fprintf(&builder, "%q: %s", name, formatObject(preview))
 					} else if description, ok := value["description"].(string); ok {
-						builder.WriteString(fmt.Sprintf("%q: %s", name, description))
+						fmt.Fprintf(&builder, "%q: %s", name, description)
 					} else {
-						builder.WriteString(fmt.Sprintf("%q: [object Object]", name))
+						fmt.Fprintf(&builder, "%q: [object Object]", name)
 					}
 				}
 			}
